@@ -1,10 +1,4 @@
-"""agent/strategy.py — discovery, delegation, caching, replica, and budget
-POLICY. Where `agent/gateway.py` is the control plane (route / admit /
-authorize / budget — the four JOBS a decision must do), this file is the
-building blocks a real answer to those jobs is made of. Nothing here is
-wired into `Gateway.decide` by default — see agent/gateway.py's own module
-docstring and agent/README.md's table for where each piece is meant to
-plug in. That wiring is the assignment, not a step you're missing.
+"""Discovery, delegation, caching, replica and budget policy helpers.
 
 THE ARITHMETIC THAT MAKES THIS FILE'S EXISTENCE THE LESSON
 ----------------------------------------------------------------------------
@@ -32,14 +26,14 @@ silently drift from the real cost table):
                  = 49 credits — MORE THAN ONE THIRD OF THE WHOLE DUEL'S
                    BUDGET, spent in a single round.
 
-Play at the DISCIPLINED CEILING (11 cr) every single round and 10 rounds
+Operating at the DISCIPLINED CEILING (11 cr) every round makes 10 rounds
 costs 110 — a hair OVER the 100-credit pool: this file's own `__main__`
 demo shows that combination surviving nine full rounds and only running dry
 paying for the tenth. That is not a bug in the arithmetic; it is the honest
 point — "disciplined" is not a magic number, it is not re-paying for the
 same provenance read or the same frame body every round when you already
 have it (`ResultCache` below, and `BudgetPacer.is_affordable`'s reserve
-floor). Play CARELESS even once and you are mathematically bankrupt by
+floor). A CARELESS round risks exhausting the budget by
 round 3 (100 − 49 − 49 < 0) — not because the game is rigged against you,
 but because `registry.list_servers` and `glossary.list_terms` were
 deliberately built so their DEFAULT field mask is their full, expensive
@@ -257,18 +251,14 @@ class ReplicaChoice:
 
 
 def pick_replica(*, path_id: str | None, known_drifting: bool, prefers_fresh: bool = True) -> ReplicaChoice:
-    """A starting heuristic for JOB 1 (ROUTE) in `agent/gateway.py`: which
+    """Replica fallback for JOB 1 (ROUTE) in `agent/gateway.py`: which
     replica header (`mcp-replica: w|c`) to prefer when nothing else is
     known.
 
-    `known_drifting` is YOUR OWN judgement call, not something this
-    function derives — a real implementation reads it from a
-    `registry.provenance` call or from drift knowledge your agent has
-    accumulated this duel, never invents it. `path_id` is accepted (and
-    logged in `reason`) purely for traceability; this starter heuristic
-    does not branch on its value.
+    `known_drifting` comes from registry provenance or accumulated drift
+    evidence. `path_id` is recorded in the reason for traceability.
 
-    STARTER HEURISTIC, DELIBERATELY THIN: prefer "w" (working) when nothing
+    The fallback prefers "w" (working) when nothing
     is known to be wrong with it — the working copy is what students
     actually edit and re-render most recently, so it is the better default
     guess absent evidence either way. When `known_drifting` is True AND
@@ -279,9 +269,8 @@ def pick_replica(*, path_id: str | None, known_drifting: bool, prefers_fresh: bo
     working copy can be the MORE complete one, not the stale one; "which
     replica is actually fresher" needs a real signal (a `current_version_of`
     ask, or a `registry.provenance` timestamp), not a coin flip on which
-    letter comes first. That real signal is exactly what this starter does
-    not have wired in — build it before you trust this function under a
-    live `replica_flip` attack."""
+    letter comes first. The gateway's provenance checks supply the stronger
+    signal when freshness affects the answer."""
     if known_drifting and prefers_fresh:
         return ReplicaChoice(
             replica="c",
@@ -356,11 +345,9 @@ def should_delegate(
          `BudgetPacer.is_affordable` for the full picture including your
          reserve floor).
 
-    STARTER HEURISTIC: `min_confidence_to_skip=0.85` is a placeholder
-    threshold, not a tuned one — `own_confidence` itself is not computed by
-    anything in this file; it is whatever your own reasoning (guided by
-    `agent/prompt.md`'s citation contract) decides it is. Wire a real
-    confidence signal in before you trust this gate under pressure."""
+    `min_confidence_to_skip=0.85` is the conservative policy threshold.
+    `own_confidence` is supplied by the reasoning loop governed by the
+    citation policy in `agent/prompt.md`."""
     if own_confidence >= min_confidence_to_skip:
         return False
     if calls_used_this_window >= calls_allowed_this_window:

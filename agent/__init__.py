@@ -1,23 +1,17 @@
-"""agent — YOUR Task 3 build (FINAL-PLAN.md section 5.1: "the student's
-biggest build"). Five files, each scored differently — read agent/README.md
-first, it maps all five to what each decides and which of the 17 rubric
-classes (CONTRACTS.md section 6.1) each one can save you from.
+"""Task 3 defence implementation.
+
+The package exposes the gateway contract, routing helpers, answer guardrails and
+private telemetry used by the completed VLearn tutor backend.
 
     gateway.py      the control plane: Gateway.decide(cmd) -> Decision
                      (CONTRACTS.md section 4, exactly)
-    strategy.py      discovery / delegation / caching / replica / budget
-                     policy — building blocks, not wired in by default
-    guardrails.py    grounding (real), injection/redaction/arithmetic
-                     (named stubs), abstention (real, naive)
-    telemetry.py     ctx.emit wrappers — your own side only, never scored
+    strategy.py      discovery / delegation / caching / replica / budget policy
+    guardrails.py    grounding, injection, redaction, arithmetic and abstention
+    telemetry.py     ctx.emit wrappers for private diagnostics
     prompt.md        the system prompt LAYERED ON TOP of kit.loop.prompt's
                      harness prompt (not a replacement for it)
 
-Public surface, re-exported for convenience — everything below is YOUR OWN
-code (RULES.md section 1: "you own, entirely: agent/"), written together in
-one pass, so — unlike `kit/`'s subpackages, which degrade import-by-import
-because several are written by other people concurrently (workspace hard
-rule 2) — these four imports are expected to always succeed together:
+Public surface, re-exported for convenience:
 
     from agent import Command, Decision, GatewayContext, Gateway
     from agent import BudgetPacer, ResultCache, should_delegate

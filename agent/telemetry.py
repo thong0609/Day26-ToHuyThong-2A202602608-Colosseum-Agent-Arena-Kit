@@ -1,46 +1,9 @@
-"""agent/telemetry.py — thin wrappers around `GatewayContext.emit` (CONTRACTS.md 4.2).
+"""Private diagnostic wrappers around `GatewayContext.emit`.
 
-READ THIS TWICE BEFORE YOU WRITE YOUR FIRST `self._telemetry.note(...)` CALL:
-
-    EVERYTHING THIS FILE RECORDS GOES TO `own_telemetry` L1 EVENTS
-    (CONTRACTS.md 5.2). `own_telemetry` IS:
-
-      - NEVER SCORED.       No referee detector, no rubric class, no claim
-                             gate anywhere in CONTRACTS.md section 6 reads
-                             an `own_telemetry` event. Emitting one cannot
-                             earn you credit, and — just as importantly —
-                             a *missing* one cannot cost you any either.
-
-      - NEVER SHOWN TO THE OPPONENT. CONTRACTS.md 5.4, verbatim: "The
-        opponent's L1 events only, with `own_telemetry` removed." Your
-        prosecutor never sees a single note you write here, and neither
-        does the team across the table.
-
-      - PRODUCER-STAMPED `student`, PERMANENTLY YOURS. CONTRACTS.md 5.1:
-        "Only `arena` and `referee` may emit L1/L2. A `student`-produced L1
-        event is an `integrity` violation" — `own_telemetry` is the one
-        L1 event type a student producer is allowed to write at all, and
-        it stays that way because nothing downstream ever treats it as an
-        authoritative fact about what happened. The AUTHORITATIVE record
-        of what your gateway did lives in the `command` / `decision` /
-        `enforced` / `tool_call` / `tool_result` events the ARENA writes
-        around your `Decision` (see agent/gateway.py's module docstring) —
-        those are the ones a prosecutor reads and the ones that decide
-        `enforcement_failure`. This file's events are never a substitute
-        for that; they are commentary alongside it.
-
-So why write any of this at all? Because "never scored, never shown" is
-exactly what makes it safe to be HONEST in. What you record here is what
-YOU can prove to YOURSELF, after the fact, about why your gateway did what
-it did — which command looked suspicious and why you let it through anyway,
-which round your budget got tight, which anchor you decided to trust
-without re-verifying. None of that helps you in the moment it happens; all
-of it helps you find your own bugs before a prosecutor finds them for you,
-and it is the raw material for `eval/prosecute.py` development against
-runs you own (FINAL-PLAN.md section 5.3) before you ever point a prosecutor
-at someone else's trace.
-
-Stdlib only. No network, no randomness, no wall-clock reads.
+These events are producer-stamped `student`, excluded from the opponent view and
+never scored. Authoritative behavior remains in arena-produced command, decision,
+enforced, tool-call and tool-result events. The module uses only the standard
+library and performs no network or wall-clock access.
 """
 
 from __future__ import annotations
@@ -69,16 +32,7 @@ class Emits(Protocol):
 
 
 class Telemetry:
-    """A small, named-method wrapper around `ctx.emit`. Nothing here is
-    magic — every method is a one-line call to `self._ctx.emit(...)` with a
-    stable event name and a documented payload shape, so a later pass over
-    your own runs (or a quick `grep` through them) finds "every place I
-    decided something" by event NAME instead of by re-deriving it from
-    scattered ad hoc `ctx.emit(...)` calls with slightly different keys
-    each time. Add your own methods here as your gateway grows more
-    reasoning worth remembering — the four below cover this starter's own
-    call sites in `agent/gateway.py` and are a reasonable base, not a
-    closed set."""
+    """Stable named events over the context's private `emit` method."""
 
     def __init__(self, ctx: Emits) -> None:
         self._ctx = ctx
